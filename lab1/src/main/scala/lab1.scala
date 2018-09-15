@@ -8,6 +8,7 @@ import org.apache.log4j.{Level, Logger}
 
 import org.apache.spark.SparkContext._
 
+//dataset implementation
 object GDelt {
   case class GDeltData ( 
     gkgRecordId: String, 
@@ -60,9 +61,9 @@ object GDelt {
 
     val ds = spark.read 
                   .schema(schema) 
-                  .option("timestampFormat", "MMddyyhhmmss")
+                  .option("timestampFormat", "MMddyy")
                   .option("delimiter", "\t")
-                  .csv("/home/andre/tudelft/supercomputing/lab1/segment/20150218230000.gkg.csv")
+                  .csv("/home/ines/Documents/SBD/supercomputing-for-big-data/lab1/segment/20150218230000.gkg.csv")  //TODO remove
                   .as[GDeltData]
 
     // val dsFilter = ds.filter(a => a.timestamp ==
@@ -70,14 +71,16 @@ object GDelt {
       // val reduced = ds.map((x: GDeltData) => x.date)
 
     val countNames = ds.filter(x => x.allNames != null)
-                       .flatMap(x => x.allNames.split(";"))
-                       .map(line => (line.split(",")(0),1))
-                       .groupByKey(_._1)
-                       .reduceGroups((a, b) => (a._1, a._2 + b._2))
-                       .map(_._2)
+                        .flatMap(x => x.allNames.split(";"))
+                        .map(line => (line.split(",")(0),1))
+                        .groupByKey(_._1)
+                        .reduceGroups((a, b) => (a._1, a._2 + b._2))
+                        .map(_._2)
 
     countNames.collect.foreach(println)
   }
+
+  //END
 
   def main(args: Array[String]) {
     Logger.getLogger("org.apache.spark").setLevel(Level.WARN)
@@ -91,7 +94,11 @@ object GDelt {
 
     import spark.implicits._
 
-    val rawData = sc.textFile("/home/andre/tudelft/supercomputing/lab1/segment/20150218230000.gkg.csv")
+    datasetImplementation()
+
+
+
+    //val rawData = sc.textFile("/home/andre/tudelft/supercomputing/lab1/segment/20150218230000.gkg.csv")
     // val lines = rawData.split("\n")
 
     // val countNames = ds.filter(x => x.allNames != null)
@@ -101,7 +108,7 @@ object GDelt {
     //                    .reduceGroups((a, b) => (a._1, a._2 + b._2))
     //                    .map(_._2))
 
-    rawData.take(2).foreach(println)
+    //rawData.take(2).foreach(println)
 
     spark.stop
   }
