@@ -61,21 +61,29 @@ object GDelt {
 
     val ds = spark.read 
                   .schema(schema) 
-                  .option("timestampFormat", "MMddyyhhmmss")
+                  .option("timestampFormat", "MM/dd/yy:hh:mm")
                   .option("delimiter", "\t")
                   .csv("/home/ines/Documents/SBD/supercomputing-for-big-data/lab1/segment/20150218230000.gkg.csv")  //TODO remove
                   .as[GDeltData]
 
-    // val dsFilter = ds.filter(a => a.timestamp ==
-        // new Timestamp(2014 - 1900, 2, 10, 1, 1, 0, 0))
-      // val reduced = ds.map((x: GDeltData) => x.date)
+    
+    //val dsFilter = ds.filter(a => a.date == new Timestamp(2014 - 1900, 2, 10, 1, 1, 0, 0))
+    //val reduced = ds.map((x: GDeltData) => x.date)
+    //reduced.collect.foreach(println)
 
-    val getPairs = ds.filter(x => x.allNames != null)
-                        .map(x => (x.date, x.allNames.split(";")))
-                        .flatMap(x => (x._2.map( y => ((x._1, y.split(",")(0)),1))))  //((date,name), count)
+    //clean up
+    val cleanData = ds.filter(x => x.allNames != null)
+    //create structure ((date,name), count)
+    val getPairs = cleanData.map(x => (x.date, x.allNames.split(";")))
+                        .flatMap(x => (x._2.map( y => ((x._1, y.split(",")(0)),1))))  
+    //count
     val getCount = getPairs.groupByKey(_._1)
                         .reduceGroups((a, b) => (a._1, a._2 + b._2))
-                        .map(_._2)
+                        .map(_._2).as("theme")
+                  
+    //take top 10 for each day COMPOR - errado
+    val sort = getCount.sort("theme._2")
+                    //.take(10)
 
     getCount.collect.foreach(println)
   }
