@@ -76,6 +76,7 @@ object GDelt {
     //create structure ((date,name), count)
     val getPairs = cleanData.map(x => (x.date, x.allNames.split(";")))
                         .flatMap(x => (x._2.map( y => ((x._1, y.split(",")(0)),1))))  
+    
     //count
     val getCount = getPairs.groupByKey(_._1)
                         .reduceGroups((a, b) => (a._1, a._2 + b._2))
@@ -83,7 +84,7 @@ object GDelt {
                   
     //take top 10 for each day COMPOR - errado
     val sort = getCount.sort("theme._2")
-                    //.take(10)
+                      .take(10)
 
     getCount.collect.foreach(println)
   }
