@@ -61,7 +61,7 @@ object GDelt {
 
     val ds = spark.read 
                   .schema(schema) 
-                  .option("timestampFormat", "MMddyy")
+                  .option("timestampFormat", "MMddyyhhmmss")
                   .option("delimiter", "\t")
                   .csv("/home/ines/Documents/SBD/supercomputing-for-big-data/lab1/segment/20150218230000.gkg.csv")  //TODO remove
                   .as[GDeltData]
@@ -70,14 +70,14 @@ object GDelt {
         // new Timestamp(2014 - 1900, 2, 10, 1, 1, 0, 0))
       // val reduced = ds.map((x: GDeltData) => x.date)
 
-    val countNames = ds.filter(x => x.allNames != null)
-                        .flatMap(x => x.allNames.split(";"))
-                        .map(line => (line.split(",")(0),1))
-                        .groupByKey(_._1)
+    val getPairs = ds.filter(x => x.allNames != null)
+                        .map(x => (x.date, x.allNames.split(";")))
+                        .flatMap(x => (x._2.map( y => ((x._1, y.split(",")(0)),1))))  //((date,name), count)
+    val getCount = getPairs.groupByKey(_._1)
                         .reduceGroups((a, b) => (a._1, a._2 + b._2))
                         .map(_._2)
 
-    countNames.collect.foreach(println)
+    getCount.collect.foreach(println)
   }
 
   //END
