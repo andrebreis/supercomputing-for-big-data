@@ -5,6 +5,7 @@ import org.apache.spark.sql._
 import java.sql.Timestamp
 
 import org.apache.log4j.{Level, Logger}
+import java.text.SimpleDateFormat
 
 import org.apache.spark.SparkContext._
 
@@ -15,6 +16,12 @@ object GDelt {
     date: Timestamp,
     allNames: String
   )
+
+  //in order to deal with strings and without hours :)
+  def formatDate(input: Timestamp) : String = {
+    val newFormat = new SimpleDateFormat("yyyy-MM-dd")
+    return newFormat.format(input.getTime())
+  }
 
   def main(args: Array[String]) {
     Logger.getLogger("org.apache.spark").setLevel(Level.WARN)
@@ -66,23 +73,24 @@ object GDelt {
                   .schema(schema) 
                   .option("timestampFormat", "MMddyyhhmm")
                   .option("delimiter", "\t")
-                  .csv("/home/ines/Documents/SBD/supercomputing-for-big-data/lab1/segment/20150218230000.gkg.csv")  //TODO remove
+                  .csv("/home/ines/Documents/SBD/supercomputing-for-big-data/lab1/segment/*.gkg.csv")  //TODO remove
                   .as[GDeltData]
 
     //clean up + create structure ((date,name), count)
     val getPairs =  ds.filter(x => x.allNames != null)
-                        .map(x => (x.date, x.allNames.split(";")))
+                        .map(x => (formatDate(x.date), x.allNames.split(";")))
                         .flatMap(x => (x._2.map( y => ((x._1, y.split(",")(0)),1))))  
-                        .filter(x => x._1._2 != "Type ParentCategory")
+                        .filter(x => !(x._1._2 contains "ParentCategory"))
     
     //count
     val getCount = getPairs.groupByKey(_._1)
                         .reduceGroups((a, b) => (a._1, a._2 + b._2))
                         .map(_._2).as("theme")
                   
-    //take top 10 for each day COMPOR - errado
+    //sort by day and by count
     val sort = getCount.sort($"theme._2".desc)
-
+                      .map(x => (x._1._1, (x._1._2, x._2))).as("newgroup")
+              
     sort.take(10).foreach(println)
 
     spark.stop
