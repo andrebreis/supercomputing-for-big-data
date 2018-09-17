@@ -72,9 +72,9 @@ object GDelt {
     //reduced.collect.foreach(println)
 
     //clean up
-    val cleanData = ds.filter(x => x.allNames != null)
     //create structure ((date,name), count)
-    val getPairs = cleanData.map(x => (x.date, x.allNames.split(";")))
+    val getPairs =  ds.filter(x => x.allNames != null)
+                        .map(x => (x.date, x.allNames.split(";")))
                         .flatMap(x => (x._2.map( y => ((x._1, y.split(",")(0)),1))))  
     
     //count
@@ -83,10 +83,11 @@ object GDelt {
                         .map(_._2).as("theme")
                   
     //take top 10 for each day COMPOR - errado
-    val sort = getCount.sort("theme._2")
-                      .take(10)
+    val sort = getCount.sort($"theme._2".desc)
 
-    getCount.collect.foreach(println)
+    sort.take(10).foreach(println)
+
+    spark.stop
   }
 
   //END
@@ -94,18 +95,16 @@ object GDelt {
   def main(args: Array[String]) {
     Logger.getLogger("org.apache.spark").setLevel(Level.WARN)
     
-    val spark = SparkSession
+    /*val spark = SparkSession
       .builder
       .appName("GDelt")
       .config("spark.master", "local")
       .getOrCreate()
     val sc = spark.sparkContext // If you need SparkContext object
 
-    import spark.implicits._
+    import spark.implicits._*/
 
     datasetImplementation()
-
-
 
     //val rawData = sc.textFile("/home/andre/tudelft/supercomputing/lab1/segment/20150218230000.gkg.csv")
     // val lines = rawData.split("\n")
@@ -119,7 +118,7 @@ object GDelt {
 
     //rawData.take(2).foreach(println)
 
-    spark.stop
+    
   }
 }
 
