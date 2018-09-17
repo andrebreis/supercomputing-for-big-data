@@ -16,7 +16,17 @@ object GDelt {
     allNames: String
   )
 
-  def datasetImplementation() {
+  def main(args: Array[String]) {
+    Logger.getLogger("org.apache.spark").setLevel(Level.WARN)
+
+    val spark = SparkSession
+      .builder
+      .appName("GDelt")
+      .config("spark.master", "local")
+      .getOrCreate()
+    
+    import spark.implicits._
+    
     val schema =
       StructType(
         Array(
@@ -50,14 +60,7 @@ object GDelt {
         )
       )
 
-    val spark = SparkSession
-      .builder
-      .appName("GDelt")
-      .config("spark.master", "local")
-      .getOrCreate()
-    val sc = spark.sparkContext // If you need SparkContext object
-
-    import spark.implicits._
+    //val sc = spark.sparkContext // If you need SparkContext object
 
     val ds = spark.read 
                   .schema(schema) 
@@ -66,13 +69,7 @@ object GDelt {
                   .csv("/home/ines/Documents/SBD/supercomputing-for-big-data/lab1/segment/20150218230000.gkg.csv")  //TODO remove
                   .as[GDeltData]
 
-    
-    //val dsFilter = ds.filter(a => a.date == new Timestamp(2014 - 1900, 2, 10, 1, 1, 0, 0))
-    //val reduced = ds.map((x: GDeltData) => x.date)
-    //reduced.collect.foreach(println)
-
-    //clean up
-    //create structure ((date,name), count)
+    //clean up + create structure ((date,name), count)
     val getPairs =  ds.filter(x => x.allNames != null)
                         .map(x => (x.date, x.allNames.split(";")))
                         .flatMap(x => (x._2.map( y => ((x._1, y.split(",")(0)),1))))  
@@ -89,36 +86,6 @@ object GDelt {
     sort.take(10).foreach(println)
 
     spark.stop
-  }
-
-  //END
-
-  def main(args: Array[String]) {
-    Logger.getLogger("org.apache.spark").setLevel(Level.WARN)
-    
-    /*val spark = SparkSession
-      .builder
-      .appName("GDelt")
-      .config("spark.master", "local")
-      .getOrCreate()
-    val sc = spark.sparkContext // If you need SparkContext object
-
-    import spark.implicits._*/
-
-    datasetImplementation()
-
-    //val rawData = sc.textFile("/home/andre/tudelft/supercomputing/lab1/segment/20150218230000.gkg.csv")
-    // val lines = rawData.split("\n")
-
-    // val countNames = ds.filter(x => x.allNames != null)
-    //                    .flatMap(x => x.allNames.split(";"))
-    //                    .map(line => (line.split(",")(0),1))
-    //                    .groupByKey(_._1)
-    //                    .reduceGroups((a, b) => (a._1, a._2 + b._2))
-    //                    .map(_._2))
-
-    //rawData.take(2).foreach(println)
-
     
   }
 }
