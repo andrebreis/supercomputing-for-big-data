@@ -1,6 +1,8 @@
 package example
 
 import org.apache.spark.sql.types._
+import org.apache.spark.sql.functions._
+import org.apache.spark.sql.DataFrame
 import org.apache.spark.sql._
 import java.sql.Timestamp
 
@@ -22,6 +24,13 @@ object GDelt {
     val newFormat = new SimpleDateFormat("yyyy-MM-dd")
     return newFormat.format(input.getTime())
   }
+
+
+  def myprint(input: Row) = {
+    val x = input.get(1).asInstanceOf[Seq[(String,Int)]].take(10)
+    printf("%s : (%s) \n", input.get(0), x)
+  }
+
 
   def main(args: Array[String]) {
     Logger.getLogger("org.apache.spark").setLevel(Level.WARN)
@@ -86,15 +95,16 @@ object GDelt {
     val getCount = getPairs.groupByKey(_._1)
                         .reduceGroups((a, b) => (a._1, a._2 + b._2))
                         .map(_._2).as("theme")
-                  
-    //sort by day and by count
-    val sort = getCount.sort($"theme._2".desc)
-                      .map(x => (x._1._1, (x._1._2, x._2))).as("newgroup")
+                        .sort($"theme._2".desc)
+                        .map(x => (x._1._1, (x._1._2, x._2)))
               
-    sort.take(10).foreach(println)
+    val new_ds = getCount.toDF("date","values")
+    val sort = new_ds.groupBy("date")
+                    .agg(collect_list($"values"))
+    
+    sort.collect.foreach(myprint)
 
     spark.stop
-    
   }
 }
 
