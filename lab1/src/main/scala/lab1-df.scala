@@ -12,7 +12,7 @@ import java.text.SimpleDateFormat
 import org.apache.spark.SparkContext._
 
 //dataset implementation
-object GDelt {
+object GDelt_df {
   case class GDeltData ( 
     gkgRecordId: String, 
     date: Timestamp,
@@ -26,6 +26,7 @@ object GDelt {
   }
 
 
+  //print results
   def myprint(input: Row) = {
     val x = input.get(1).asInstanceOf[Seq[(String,Int)]].take(10)
     printf("%s : (%s) \n", input.get(0), x)
@@ -37,12 +38,13 @@ object GDelt {
 
     val spark = SparkSession
       .builder
-      .appName("GDelt")
+      .appName("GDelt_df")
       .config("spark.master", "local")
       .getOrCreate()
     
     import spark.implicits._
     
+    //first schema that reads the data of csv
     val schema =
       StructType(
         Array(
@@ -76,8 +78,6 @@ object GDelt {
         )
       )
 
-    //val sc = spark.sparkContext // If you need SparkContext object
-
     val ds = spark.read 
                   .schema(schema) 
                   .option("timestampFormat", "MMddyyhhmm")
@@ -85,24 +85,27 @@ object GDelt {
                   .csv("/home/ines/Documents/SBD/supercomputing-for-big-data/lab1/segment/*.gkg.csv")  //TODO remove
                   .as[GDeltData]
 
-    //clean up + create structure ((date,name), count)
-    val getPairs =  ds.filter(x => x.allNames != null)
-                        .map(x => (formatDate(x.date), x.allNames.split(";")))
-                        .flatMap(x => (x._2.map( y => ((x._1, y.split(",")(0)),1))))  
-                        .filter(x => !(x._1._2 contains "ParentCategory"))
+    val t1 = ds.filter(x => x.allNames != null)                             //remove lines without articles
+                .map(x => (formatDate(x.date), x.allNames.split(";")))      //separate articles
+                .flatMap(x => (x._2.map( y => (x._1, y.split(",")(0), 1)))) //create a row (date, article, count)  
+                .as("gdelt")
+                .filter(x => !(x._2 contains "ParentCategory"))          //remove this parent categories
     
-    //count
-    val getCount = getPairs.groupByKey(_._1)
-                        .reduceGroups((a, b) => (a._1, a._2 + b._2))
-                        .map(_._2).as("theme")
-                        .sort($"theme._2".desc)
-                        .map(x => (x._1._1, (x._1._2, x._2)))
-              
-    val new_ds = getCount.toDF("date","values")
-    val sort = new_ds.groupBy("date")
-                    .agg(collect_list($"values"))
+    //sum same articles from the same day ans sort in descending order
+    val t2 = t1.groupBy($"gdelt._1", $"gdelt._2").sum()
+                .sort($"sum(_3)".desc)
+               
+    //create structure { date , List(article, count) }
+    val t3 =  t2.withColumn("pairs", struct($"gdelt._2", $"sum(_3)"))
+                .groupBy("gdelt._1")
+                .agg(collect_list("pairs") as "pairs")
     
-    sort.collect.foreach(myprint)
+    //top 10 - TODO
+    //val t4 = t3.map(row => (row.get(0), row.get(1).asInstanceOf[Seq[(String,Int)]].take(10)))
+    //t4.show()
+
+    t3.collect.foreach(myprint)
+
 
     spark.stop
   }
