@@ -80,7 +80,7 @@ object GDelt_df {
 
     val ds = spark.read 
                   .schema(schema) 
-                  .option("timestampFormat", "MMddyyhhmm")
+                  .option("timestampFormat", "yyyyMMddhhmm")
                   .option("delimiter", "\t")
                   .csv("/home/ines/Documents/SBD/supercomputing-for-big-data/lab1/segment/*.gkg.csv")  //TODO remove
                   .as[GDeltData]
@@ -90,7 +90,7 @@ object GDelt_df {
                 .flatMap(x => (x._2.map( y => (x._1, y.split(",")(0), 1)))) //create a row (date, article, count)  
                 .as("gdelt")
                 .filter(x => !(x._2 contains "ParentCategory"))          //remove this parent categories
-    
+
     //sum same articles from the same day ans sort in descending order
     val t2 = t1.groupBy($"gdelt._1", $"gdelt._2").sum()
                 .sort($"sum(_3)".desc)
@@ -99,15 +99,16 @@ object GDelt_df {
     val t3 =  t2.withColumn("pairs", struct($"gdelt._2", $"sum(_3)"))
                 .groupBy("gdelt._1")
                 .agg(collect_list("pairs") as "pairs")
+                .sort($"gdelt._1")
     
-    //top 10 - TODO
-    //val t4 = t3.map(row => (row.get(0), row.get(1).asInstanceOf[Seq[(String,Int)]].take(10)))
+    //top 10 - does not work
+    //val t4 = t3.map(row => (row.getAs[String](0), row.getAs[Seq[Tuple2[String,Int]]](1)))
     //t4.show()
 
+    //print top 10
     t3.collect.foreach(myprint)
 
 
     spark.stop
   }
 }
-
