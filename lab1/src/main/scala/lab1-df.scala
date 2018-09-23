@@ -80,7 +80,7 @@ object GDelt_df {
 
     val ds = spark.read 
                   .schema(schema) 
-                  .option("timestampFormat", "yyyyMMddhhmm")
+                  .option("timestampFormat", "yyyyMMddHHmmss")
                   .option("delimiter", "\t")
                   .csv("/home/ines/Documents/SBD/supercomputing-for-big-data/lab1/segment/*.gkg.csv")  //TODO remove
                   .as[GDeltData]
@@ -99,7 +99,7 @@ object GDelt_df {
     val t3 =  t2.withColumn("pairs", struct($"gdelt._2", $"sum(_3)"))
                 .groupBy("gdelt._1")
                 .agg(collect_list("pairs") as "pairs")
-                .sort($"gdelt._1")
+                //.sort($"gdelt._1")
     
     //top 10 - does not work
     //val t4 = t3.map(row => (row.getAs[String](0), row.getAs[Seq[Tuple2[String,Int]]](1)))
