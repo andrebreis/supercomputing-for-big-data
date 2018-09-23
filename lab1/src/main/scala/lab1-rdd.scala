@@ -32,7 +32,8 @@ object GDeltRDD {
         for (entry <- wordWithOffsetArr) {
             val word : String = entry.split(',')(0)
 
-            words(word) += 1
+            if(!(word contains "Category"))
+                words(word) += 1
         }
 
         return words
@@ -68,11 +69,10 @@ object GDeltRDD {
                                 .getOrCreate()
         val sc = spark.sparkContext // If you need SparkContext object
 
-        val rawData = sc.textFile("/home/andre/tudelft/supercomputing/lab1/segment/20150218230000.gkg.csv")
+        val rawData = sc.textFile("/home/andre/tudelft/supercomputing/lab1/segment/*.gkg.csv")
         val columns = rawData.map(line => line.split("\t"))
         val fullColumns = columns.filter(list => list.length > 23)
-        val noFalsePositives = fullColumns.filter(list => !(list(23) contains "Category"))
-        val documentsHashMap = noFalsePositives.map(list => (formatDate(list(1)), createHashMap(list(23))))
+        val documentsHashMap = fullColumns.map(list => (formatDate(list(1)), createHashMap(list(23))))
         val groupedDates = documentsHashMap.reduceByKey(mergeHashMaps)
         val sorted = groupedDates.map(x => (x._1, retrieveMostCommon(x._2, 10)))
                     
