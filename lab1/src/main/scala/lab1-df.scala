@@ -1,4 +1,4 @@
-package example
+package lab1
 
 import org.apache.spark.sql.types._
 import org.apache.spark.sql.functions._
@@ -12,7 +12,7 @@ import java.text.SimpleDateFormat
 import org.apache.spark.SparkContext._
 
 //dataset implementation
-object GDelt_df {
+object GDeltDF {
   case class GDeltData ( 
     gkgRecordId: String, 
     date: Timestamp,
@@ -38,7 +38,7 @@ object GDelt_df {
 
     val spark = SparkSession
       .builder
-      .appName("GDelt_df")
+      .appName("GDeltDf")
       .config("spark.master", "local")
       .getOrCreate()
     
@@ -82,7 +82,7 @@ object GDelt_df {
                   .schema(schema) 
                   .option("timestampFormat", "yyyyMMddHHmmss")
                   .option("delimiter", "\t")
-                  .csv("/home/ines/Documents/SBD/supercomputing-for-big-data/lab1/segment/*.gkg.csv")  //TODO remove
+                  .csv("segment/*.gkg.csv")  //TODO remove
                   .as[GDeltData]
 
     val t1 = ds.filter(x => x.allNames != null)                             //remove lines without articles
@@ -99,15 +99,9 @@ object GDelt_df {
     val t3 =  t2.withColumn("pairs", struct($"gdelt._2", $"sum(_3)"))
                 .groupBy("gdelt._1")
                 .agg(collect_list("pairs") as "pairs")
-                //.sort($"gdelt._1")
-    
-    //top 10 - does not work
-    //val t4 = t3.map(row => (row.getAs[String](0), row.getAs[Seq[Tuple2[String,Int]]](1)))
-    //t4.show()
 
     //print top 10
     t3.collect.foreach(myprint)
-
 
     spark.stop
   }
