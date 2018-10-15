@@ -12,13 +12,6 @@ import org.apache.log4j.{Level, Logger}
 
 object GDeltRDD {
 
-    val spark = SparkSession
-        .builder
-        .appName("GDelt")
-        .config("spark.master", "local")
-        .getOrCreate()
-    val sc = spark.sparkContext // If you need SparkContext object
-
 
     def formatDate(date: String): String = {
         return "%s-%s-%s".format(date.substring(6,8),date.substring(4,6),date.substring(0,4))
@@ -48,14 +41,12 @@ object GDeltRDD {
         return map1
     }
 
-    // case class MyPair(val x:(String,Int)) extends Ordered[A] { def compare(o:MyPair) = i - o.i }
-
-    def retrieveMostCommon(map: Map[String, Int], n: Int): List[(String,Int)] = {
+    def retrieveMostCommon(map: Map[String, Int], n: Int): Array[(String,Int)] = {
         var sorted = TreeSet[(String,Int)]()(Ordering.by(-(_: (String,Int))._2))
         for((k,v) <- map) {
             sorted = sorted + ((k,v))
         }
-        val list = sorted.toList
+        val list = sorted.toArray
         return list.slice(0,n)
     }
 
@@ -65,19 +56,17 @@ object GDeltRDD {
         val spark = SparkSession
                                 .builder
                                 .appName("GDeltRDD")
-                                .config("spark.master", "local")
                                 .getOrCreate()
         val sc = spark.sparkContext // If you need SparkContext object
-
-        val rawData = sc.textFile("/home/andre/tudelft/supercomputing/lab1/segment/*.gkg.csv")
+        
+        val rawData = sc.textFile(sys.env("FILEPATH"))
         val columns = rawData.map(line => line.split("\t"))
         val fullColumns = columns.filter(list => list.length > 23)
         val documentsHashMap = fullColumns.map(list => (formatDate(list(1)), createHashMap(list(23))))
         val groupedDates = documentsHashMap.reduceByKey(mergeHashMaps)
         val sorted = groupedDates.map(x => (x._1, retrieveMostCommon(x._2, 10)))
-                    
-        sorted.collect.foreach(println)
-
+        val prettyStr = sorted.map(x => "DateResult(" + x._1 + ",List(" + x._2.deep.mkString(",") + "))")
+        sorted.coalesce(1).saveAsTextFile(sys.env("OUTPATH"))
         spark.stop
   }
 
