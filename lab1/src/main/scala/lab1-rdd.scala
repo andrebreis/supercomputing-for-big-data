@@ -66,7 +66,7 @@ object GDeltRDD {
         val groupedDates = documentsHashMap.reduceByKey(mergeHashMaps)
         val sorted = groupedDates.map(x => (x._1, retrieveMostCommon(x._2, 10)))
         val prettyStr = sorted.map(x => "DateResult(" + x._1 + ",List(" + x._2.deep.mkString(",") + "))")
-        sorted.coalesce(1).saveAsTextFile(sys.env("OUTPATH"))
+        prettyStr.saveAsTextFile(sys.env("OUTPATH"))
         spark.stop
   }
 
