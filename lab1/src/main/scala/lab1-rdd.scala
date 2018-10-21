@@ -59,14 +59,14 @@ object GDeltRDD {
                                 .getOrCreate()
         val sc = spark.sparkContext // If you need SparkContext object
         
-        val rawData = sc.textFile(sys.env("FILEPATH"))
+        val rawData = sc.textFile(sys.env("DATA_PATH"))
         val columns = rawData.map(line => line.split("\t"))
         val fullColumns = columns.filter(list => list.length > 23)
         val documentsHashMap = fullColumns.map(list => (formatDate(list(1)), createHashMap(list(23))))
         val groupedDates = documentsHashMap.reduceByKey(mergeHashMaps)
         val sorted = groupedDates.map(x => (x._1, retrieveMostCommon(x._2, 10)))
         val prettyStr = sorted.map(x => "DateResult(" + x._1 + ",List(" + x._2.deep.mkString(",") + "))")
-        prettyStr.saveAsTextFile(sys.env("OUTPATH"))
+        prettyStr.saveAsTextFile(sys.env("OUT_PATH"))
         spark.stop
   }
 
